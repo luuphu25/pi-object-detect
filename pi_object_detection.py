@@ -11,6 +11,11 @@ import argparse
 import imutils
 import time
 import cv2
+import time
+import json
+import requests
+import urllib2
+
 
 def classify_frame(net, inputQueue, outputQueue):
 	# keep looping
@@ -31,6 +36,19 @@ def classify_frame(net, inputQueue, outputQueue):
 
 			# write the detections to the output queue
 			outputQueue.put(detections)
+
+def create_info(object):
+	timestamp = time.time()
+	normal_time = time.ctime()
+	dic = { 'Time': normal_time, 'Object':object}
+	push_json = json.dumps(dic)
+	js = json.loads(push_json)
+	headers = "Content-Type: application/json"
+	r = requests.post('http://127.0.0.1:8008', json=js)
+	#req = urllib2.Request('http:127.0.0.1', 8080)
+	#req.add_header('Content-Type', 'application/json')
+	#response = urllib2.urlopen(req, push_json)
+
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -71,7 +89,9 @@ p.start()
 # initialize the video stream, allow the cammera sensor to warmup,
 # and initialize the FPS counter
 print("[INFO] starting video stream...")
-vs = VideoStream(src=0).start()
+vs = cv2.VideoCapture(0)
+
+#vs = VideoStream(src=0).start()
 # vs = VideoStream(usePiCamera=True).start()
 time.sleep(2.0)
 fps = FPS().start()
@@ -80,7 +100,10 @@ fps = FPS().start()
 while True:
 	# grab the frame from the threaded video stream, resize it, and
 	# grab its imensions
-	frame = vs.read()
+	#frame = vs.read()
+	(grabbed, frame) = vs.read()
+	if not grabbed:
+		break
 	frame = imutils.resize(frame, width=400)
 	(fH, fW) = frame.shape[:2]
 
@@ -123,7 +146,7 @@ while True:
 			y = startY - 15 if startY - 15 > 15 else startY + 15
 			cv2.putText(frame, label, (startX, y),
 				cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
-
+			create_info(str(CLASSES[idx]))
 	# show the output frame
 	cv2.imshow("Frame", frame)
 	key = cv2.waitKey(1) & 0xFF
@@ -141,5 +164,6 @@ print("[INFO] elapsed time: {:.2f}".format(fps.elapsed()))
 print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 
 # do a bit of cleanup
+vs.release()
 cv2.destroyAllWindows()
-vs.stop()
+#vs.stop()
