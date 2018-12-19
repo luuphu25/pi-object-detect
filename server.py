@@ -32,8 +32,11 @@ class Server(BaseHTTPRequestHandler):
         message = json.loads(self.rfile.read(length))
         
         # add a property to the object, just to mess with data
-        message['received'] = 'ok'
         print message
+        with open("logs.txt", "a+") as file:
+            json.dump(message, file)
+            file.write("\r\n")
+        file.close()
         # send the message back
         self._set_headers()
        # self.wfile.write(json.dumps(message))

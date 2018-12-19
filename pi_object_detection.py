@@ -44,7 +44,7 @@ def create_info(object):
 	push_json = json.dumps(dic)
 	js = json.loads(push_json)
 	headers = "Content-Type: application/json"
-	r = requests.post('http://127.0.0.1:8008', json=js)
+	r = requests.post('http://127.0.0.1:8888', json=js)
 	#req = urllib2.Request('http:127.0.0.1', 8080)
 	#req.add_header('Content-Type', 'application/json')
 	#response = urllib2.urlopen(req, push_json)
@@ -120,6 +120,7 @@ while True:
 	# draw the detections on the frame)
 	if detections is not None:
 		# loop over the detections
+		arr = []
 		for i in np.arange(0, detections.shape[2]):
 			# extract the confidence (i.e., probability) associated
 			# with the prediction
@@ -141,12 +142,16 @@ while True:
 			# draw the prediction on the frame
 			label = "{}: {:.2f}%".format(CLASSES[idx],
 				confidence * 100)
+			no = str(CLASSES[idx]) + str(i)
 			cv2.rectangle(frame, (startX, startY), (endX, endY),
 				COLORS[idx], 2)
 			y = startY - 15 if startY - 15 > 15 else startY + 15
 			cv2.putText(frame, label, (startX, y),
 				cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
 			create_info(str(CLASSES[idx]))
+			arr.append(no)
+		print arr
+			
 	# show the output frame
 	cv2.imshow("Frame", frame)
 	key = cv2.waitKey(1) & 0xFF
