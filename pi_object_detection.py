@@ -6,6 +6,7 @@ from imutils.video import VideoStream
 from imutils.video import FPS
 from multiprocessing import Process
 from multiprocessing import Queue
+from multiprocessing import Pool
 import numpy as np
 import argparse
 import imutils
@@ -15,6 +16,7 @@ import time
 import json
 import requests
 import urllib2
+import os
 
 
 def classify_frame(net, inputQueue, outputQueue):
@@ -37,14 +39,17 @@ def classify_frame(net, inputQueue, outputQueue):
 			# write the detections to the output queue
 			outputQueue.put(detections)
 
-def create_info(object):
+def create_info(object, addr):
 	timestamp = time.time()
 	normal_time = time.ctime()
 	dic = { 'Time': normal_time, 'Object':object}
 	push_json = json.dumps(dic)
 	js = json.loads(push_json)
 	headers = "Content-Type: application/json"
-	r = requests.post('http://127.0.0.1:8888', json=js)
+	try:
+		r = requests.post(addr, json=js)
+	except:
+		return -1
 	#req = urllib2.Request('http:127.0.0.1', 8080)
 	#req.add_header('Content-Type', 'application/json')
 	#response = urllib2.urlopen(req, push_json)
@@ -58,6 +63,8 @@ ap.add_argument("-m", "--model", required=True,
 	help="path to Caffe pre-trained model")
 ap.add_argument("-c", "--confidence", type=float, default=0.2,
 	help="minimum probability to filter weak detections")
+ap.add_argument("--host")
+ap.add_argument("--port")
 args = vars(ap.parse_args())
 
 # initialize the list of class labels MobileNet SSD was trained to
@@ -71,7 +78,13 @@ COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 # load our serialized model from disk
 print("[INFO] loading model...")
 net = cv2.dnn.readNetFromCaffe(args["prototxt"], args["model"])
-
+host = '127.0.0.1'
+port = '8080'
+host = args["host"]
+port = args["port"]
+addr = 'http://' + str(host) + ':' +  str(port)
+if not os.path.exists('save_image'):
+    os.mkdir('save_image')
 # initialize the input queue (frames), output queue (detections),
 # and the list of actual detections returned by the child process
 inputQueue = Queue(maxsize=1)
@@ -90,21 +103,27 @@ p.start()
 # and initialize the FPS counter
 print("[INFO] starting video stream...")
 vs = cv2.VideoCapture(0)
+width_x = 1028
+height_y = 720
+vs.set(3, width_x)
+vs.set(4, height_y)
 
 #vs = VideoStream(src=0).start()
 # vs = VideoStream(usePiCamera=True).start()
 time.sleep(2.0)
 fps = FPS().start()
-
+flag = time.time()
+start = 0
 # loop over the frames from the video stream
 while True:
+	
 	# grab the frame from the threaded video stream, resize it, and
 	# grab its imensions
 	#frame = vs.read()
 	(grabbed, frame) = vs.read()
 	if not grabbed:
 		break
-	frame = imutils.resize(frame, width=400)
+	frame = imutils.resize(frame, width=width_x, height=height_y )
 	(fH, fW) = frame.shape[:2]
 
 	# if the input queue *is* empty, give the current frame to
@@ -148,7 +167,15 @@ while True:
 			y = startY - 15 if startY - 15 > 15 else startY + 15
 			cv2.putText(frame, label, (startX, y),
 				cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
-			create_info(str(CLASSES[idx]))
+			if(str(CLASSES[idx]) == 'person' and (time.time() - flag > 2) or start == 0):
+				image_name = 'save_image//' + str(time.time()) + '_person.jpg'
+				cv2.imwrite(image_name, frame)
+				flag = time.time()
+				start = 1
+
+			pol = Process(target=create_info, args=(str(CLASSES[idx]), addr))
+			pol.start()
+			pol.join()
 			arr.append(no)
 		print arr
 			
