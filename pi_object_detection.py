@@ -13,10 +13,8 @@ import imutils
 import time
 import cv2
 import time
-import json
-import requests
-import urllib2
 import os
+import send_server
 
 
 def classify_frame(net, inputQueue, outputQueue):
@@ -39,17 +37,6 @@ def classify_frame(net, inputQueue, outputQueue):
 			# write the detections to the output queue
 			outputQueue.put(detections)
 
-def create_info(object, addr):
-	timestamp = time.time()
-	normal_time = time.ctime()
-	dic = { 'Time': normal_time, 'Object':object}
-	push_json = json.dumps(dic)
-	js = json.loads(push_json)
-	headers = "Content-Type: application/json"
-	try:
-		r = requests.post(addr, json=js)
-	except:
-		return -1
 	#req = urllib2.Request('http:127.0.0.1', 8080)
 	#req.add_header('Content-Type', 'application/json')
 	#response = urllib2.urlopen(req, push_json)
@@ -173,9 +160,7 @@ while True:
 				flag = time.time()
 				start = 1
 
-			pol = Process(target=create_info, args=(str(CLASSES[idx]), addr))
-			pol.start()
-			pol.join()
+			create_info(str(CLASSES[idx]), addr)
 			arr.append(no)
 		print arr
 			
