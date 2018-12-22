@@ -1,0 +1,19 @@
+<!doctype html> 
+<html>
+    <body>
+        <table border=1>
+            <tr>
+                <th>Object</th>
+                <th>time</th>
+                <th>accuracy</th>
+            </tr>
+            {% for item in data %}
+                <tr>
+                        <th>{{item[0]}}</th>
+                        <th>{{item[1]}}</th>
+                        <th>{{item[2]}}</th>
+                </tr>
+            {% endfor %}
+        </table>
+    </body>
+</html>
