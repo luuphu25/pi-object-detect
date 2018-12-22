@@ -2,7 +2,9 @@ from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import SocketServer
 import json
 import cgi
-
+import os
+from multiprocessing import Process
+import sqlalchemy as db
 class Server(BaseHTTPRequestHandler):
     def _set_headers(self):
         self.send_response(200)
@@ -30,18 +32,42 @@ class Server(BaseHTTPRequestHandler):
         # read the message and convert it into a python dictionary
         length = int(self.headers.getheader('content-length'))
         message = json.loads(self.rfile.read(length))
-        
-        # add a property to the object, just to mess with data
         print message
-        with open("logs.txt", "a+") as file:
-            json.dump(message, file)
-            file.write("\r\n")
-        file.close()
+        database = 'testdb'
+        table = 'detect'
+        user = 'root'
+        password = 'test'
+        host = '127.0.0.1'
+        port = '3333'
+        connect_db = 'mysql://'+  user + ':' + password + '@'+ host + ':' + port + '/' + database
+        #print connect_db        
+        engine = db.create_engine(connect_db)
+        connection = engine.connect()
+        metadata = db.MetaData()
+        table = db.Table(table, metadata, autoload=True, autoload_with=engine)
+        pol = Process(target= insert_data, args=(connection, message, table))
+        pol.start()
+        pol.join()
+           
+        # add a property to the object, just to mess with data
+
+        #with open("logs.txt", "a+") as file: # wrrite to file
+         #   json.dump(message, file)
+         #   file.write("\r\n")
+        #file.close()
         # send the message back
         self._set_headers()
        # self.wfile.write(json.dumps(message))
-        
+
+def insert_data(connection, data, table):
+    query = db.insert(table).values(data)
+    connection.execute(query)
+    print "Insert success"
+
 def run(server_class=HTTPServer, handler_class=Server, port=8008):
+    #### Database 
+    
+    #####**********************************######
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
     
@@ -50,8 +76,8 @@ def run(server_class=HTTPServer, handler_class=Server, port=8008):
     
 if __name__ == "__main__":
     from sys import argv
-    
+
     if len(argv) == 2:
         run(port=int(argv[1]))
     else:
-        run()
+        run()   

@@ -39,10 +39,11 @@ def classify_frame(net, inputQueue, outputQueue):
 			# write the detections to the output queue
 			outputQueue.put(detections)
 
-def create_info(object, addr):
+def create_info(object, addr, accuracy):
 	timestamp = time.time()
 	normal_time = time.ctime()
-	dic = { 'Time': normal_time, 'Object':object}
+	#:dic = { 'Time': normal_time, 'Object':object}
+	dic = {'object_name': object, 'time': timestamp, 'accuracy': accuracy}
 	push_json = json.dumps(dic)
 	js = json.loads(push_json)
 	headers = "Content-Type: application/json"
@@ -167,17 +168,17 @@ while True:
 			y = startY - 15 if startY - 15 > 15 else startY + 15
 			cv2.putText(frame, label, (startX, y),
 				cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
+			confidence = round(confidence * 100, 2)
 			if(str(CLASSES[idx]) == 'person' and (time.time() - flag > 2) or start == 0):
 				image_name = 'save_image//' + str(time.time()) + '_person.jpg'
 				cv2.imwrite(image_name, frame)
 				flag = time.time()
 				start = 1
 
-			pol = Process(target=create_info, args=(str(CLASSES[idx]), addr))
-			pol.start()
-			pol.join()
+				pol = Process(target=create_info, args=(str(CLASSES[idx]), addr, str(confidence)))
+				pol.start()
+				pol.join()
 			arr.append(no)
-		print arr
 			
 	# show the output frame
 	cv2.imshow("Frame", frame)
